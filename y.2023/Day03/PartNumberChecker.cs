@@ -4,7 +4,7 @@ public static class PartNumberChecker
 {
     private const char Separator = '.';
 
-    private static Tuple<int, int, int> _lastAdjacentSymbolPosition = new Tuple<int, int, int>(-1, -1, -1);
+    private static Tuple<int, int, int> _lastAdjacentSymbolPosition = new (-1, -1, -1);
     
     public static List<int> GetValidPartNumbers(IList<string> partNumberLines)
     {
@@ -65,7 +65,7 @@ public static class PartNumberChecker
 
         return validPartNumbers;
     }
-
+    
     private static bool HasAdjacentSymbol(int fileIndex, int columnIndex, char[,] partNumberMatrix)
     {
         return HasAdjacentSymbolAtLeft(fileIndex, columnIndex, partNumberMatrix) ||
