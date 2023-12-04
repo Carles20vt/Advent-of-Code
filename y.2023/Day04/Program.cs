@@ -1,4 +1,6 @@
-﻿namespace Day04;
+﻿using System.Diagnostics;
+
+namespace Day04;
 
 internal abstract class Program
 {
@@ -19,14 +21,25 @@ internal abstract class Program
                 Console.WriteLine($"File not found at path: {filePath}");
                 return;
             }
+            
+            var stopwatch = new Stopwatch();
 
             var scratchBoardLines = File.ReadAllLines(filePath);
 
+            stopwatch.Start();
             var totalPoints = scratchBoardLines.Sum(ScratchCardChecker.GetPoints);
-            Console.WriteLine($"The total points are: {totalPoints}");
-
+            stopwatch.Stop();
+            Console.WriteLine($"The total points are: {totalPoints} - {stopwatch.ElapsedMilliseconds} ms");
+            
+            stopwatch.Restart();
             var totalScratchCardsWon = ScratchCardChecker.GetTotalScratchCardsWon(scratchBoardLines);
-            Console.WriteLine($"\nThe total won scratchcards are: {totalScratchCardsWon}");
+            stopwatch.Stop();
+            Console.WriteLine($"\nThe total won scratchcards are: {totalScratchCardsWon} - {stopwatch.ElapsedMilliseconds} ms");
+            
+            stopwatch.Restart();
+            totalScratchCardsWon = ScratchCardChecker.GetTotalScratchCardsWonRefactored(scratchBoardLines);
+            stopwatch.Stop();
+            Console.WriteLine($"\nThe total won scratchcards are: {totalScratchCardsWon} (Refactored) - {stopwatch.ElapsedMilliseconds} ms");
         }
         catch (Exception ex)
         {

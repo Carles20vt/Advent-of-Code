@@ -9,28 +9,73 @@ public static class ScratchCardChecker
         var points = 0;
         var isFirstMatch = true;
 
+        if (scratchCard.Numbers != null)
+        {
+            foreach (var number in scratchCard.Numbers)
+            {
+                var isWinningNumber = scratchCard.WinningNumbers != null &&
+                                      scratchCard.WinningNumbers.Contains(number);
+                if (!isWinningNumber)
+                {
+                    continue;
+                }
+
+                if (isFirstMatch)
+                {
+                    isFirstMatch = false;
+                    points = 1;
+
+                    continue;
+                }
+
+                points *= 2;
+            }
+        }
+
+        Console.WriteLine($"The card {scratchCard.CardId} has {points} points.");
+
+        return points;
+    }
+    
+    public static int GetTotalScratchCardsWonRefactored(string [] scratchCardsLines)
+    {
+        var scratchCards = scratchCardsLines.Select(BuildScratchCard).ToList();
+        
+        foreach (var scratchCard in scratchCards)
+        {
+            UpdateCardsAmounts(scratchCard, scratchCards);
+        }
+
+        return scratchCards.Sum(x => x.Amount) + scratchCards.Count;
+    }
+
+    private static void UpdateCardsAmounts(Card scratchCard, List<Card> scratchCards)
+    {
+        if (scratchCard.Numbers == null ||
+            scratchCard.WinningNumbers == null)
+        {
+            return;
+        }
+        
+        var wonCardsCounter = 1;
         foreach (var number in scratchCard.Numbers)
         {
-            var isWinningNumber = scratchCard.WinningNumbers.Contains(number);
-            if (!isWinningNumber)
+            if (!scratchCard.WinningNumbers.Contains(number))
             {
                 continue;
             }
             
-            if (isFirstMatch)
+            var wonCard = scratchCards.FirstOrDefault(x => x.CardId == scratchCard.CardId + wonCardsCounter);
+            if (wonCard == null)
             {
-                isFirstMatch = false;
-                points = 1;
-                    
                 continue;
             }
+                
+            wonCard.Amount++;
+            wonCardsCounter++;
 
-            points *= 2;
+            UpdateCardsAmounts(wonCard, scratchCards);
         }
-        
-        Console.WriteLine($"The card {scratchCard.CardId} has {points} points.");
-
-        return points;
     }
 
     public static int GetTotalScratchCardsWon(string [] scratchCardsLines)
@@ -48,8 +93,14 @@ public static class ScratchCardChecker
 
     private static void GetWonCopies(Card originalScratchCard, List<Card> originalScratchCards, List<Card> copiesScratchCards)
     {
+        if (originalScratchCard.Numbers == null)
+        {
+            return;
+        }
+        
         var matchingNumbersCount = originalScratchCard.Numbers
-            .Count(number => originalScratchCard.WinningNumbers.Contains(number));
+            .Count(number => originalScratchCard.WinningNumbers != null && 
+                             originalScratchCard.WinningNumbers.Contains(number));
 
         if (matchingNumbersCount <= 0)
         {

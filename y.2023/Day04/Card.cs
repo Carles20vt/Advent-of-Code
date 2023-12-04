@@ -2,9 +2,11 @@ namespace Day04;
 
 public class Card
 {
-    public int CardId { get; set; }
+    public int CardId { get; init; }
     
-    public List<int> WinningNumbers { get; set; }
+    public List<int>? WinningNumbers { get; init; }
     
-    public List<int> Numbers { get; set; }
+    public List<int>? Numbers { get; init; }
+
+    public int Amount { get; set; }
 }
