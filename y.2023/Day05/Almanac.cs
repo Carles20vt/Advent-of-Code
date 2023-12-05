@@ -13,33 +13,44 @@ public class Almanac
 
     public long GetLowestLocation()
     {
-        var seedsList = GetSeedsList();
+        var seedGroups = GetSeedGroup();
 
-        BuildSeedMapData(seedsList);
+        foreach (var seedGroup in seedGroups)
+        {
+            var seedsList = GetSeedsList(seedGroup);
+            BuildSeedMapData(seedsList);
+        }
         
-        var initialSeedMaps = seedMap.Where(x => seedsList.Contains(x.Seed)).ToArray();
-
-        foreach (var map in initialSeedMaps)
+        foreach (var map in seedMap)
         {
             Console.WriteLine($"Seed {map.Seed}, soil {map.Soil}, fertilizer {map.Fertilizer}, water {map.Water}, light {map.Light}, temperature {map.Temperature}, humidity {map.Humidity}, location {map.Location}.");
         }
 
-        var lowestLocationNumber = initialSeedMaps.Min(x => x.Location);
+        var lowestLocationNumber = seedMap.Min(x => x.Location);
         return lowestLocationNumber;
     }
 
-    private HashSet<long> GetSeedsList()
+    private HashSet<(long, long)> GetSeedGroup()
     {
         var seedString = almanacLines.FirstOrDefault(x => x.Contains("seeds:"));
         var seedsListRaw = GetNumbersFromLine(seedString.Split(':')[1]);
-        var seedsList = new HashSet<long>();
+        var seedsList = new HashSet<(long, long)>();
 
         for (var seedIndex = 0; seedIndex < seedsListRaw.Count; seedIndex = seedIndex + 2)
         {
-            for (var rangeIndex = 0; rangeIndex < seedsListRaw[seedIndex + 1]; rangeIndex++)
-            {
-                seedsList.Add(seedsListRaw[seedIndex] + rangeIndex);
-            }
+            seedsList.Add((seedsListRaw[seedIndex], seedsListRaw[seedIndex + 1]));
+        }
+
+        return seedsList;
+    }
+    
+    private HashSet<long> GetSeedsList((long, long) seedGroup)
+    {
+        var seedsList = new HashSet<long>();
+        
+        for (var rangeIndex = 0; rangeIndex < seedGroup.Item2; rangeIndex++)
+        {
+            seedsList.Add(seedGroup.Item1 + rangeIndex);
         }
 
         return seedsList;
