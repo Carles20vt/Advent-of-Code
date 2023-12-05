@@ -3,6 +3,7 @@ namespace Day05;
 public class Almanac
 {
     private readonly string[] almanacLines;
+    private long lowestLocationNumber;
     private static HashSet<SeedMap> seedMap;
     
     public Almanac(string[] almanacLines)
@@ -15,19 +16,46 @@ public class Almanac
     {
         var seedGroups = GetSeedGroup();
 
+        ClearOverlappingRanges(seedGroups);
+
         foreach (var seedGroup in seedGroups)
         {
             var seedsList = GetSeedsList(seedGroup);
             BuildSeedMapData(seedsList);
         }
         
+        /*
         foreach (var map in seedMap)
         {
             Console.WriteLine($"Seed {map.Seed}, soil {map.Soil}, fertilizer {map.Fertilizer}, water {map.Water}, light {map.Light}, temperature {map.Temperature}, humidity {map.Humidity}, location {map.Location}.");
         }
 
         var lowestLocationNumber = seedMap.Min(x => x.Location);
-        return lowestLocationNumber;
+        */
+        
+        return this.lowestLocationNumber;
+    }
+    
+    private static void ClearOverlappingRanges(HashSet<(long, long)> seedGroups)
+    {
+        var seedGroupsWithoutOverlapping = new HashSet<(long, long)>(seedGroups);
+
+        foreach (var rangeA in seedGroups)
+        {
+            foreach (var rangeB in seedGroups.Where(rangeB => rangeA != rangeB && IsOverlapping(rangeA, rangeB)))
+            {
+                seedGroupsWithoutOverlapping.Remove(rangeB);
+            }
+        }
+
+        seedGroups.Clear();
+        seedGroups.UnionWith(seedGroupsWithoutOverlapping);
+    }
+
+    
+    private static bool IsOverlapping((long, long) rangeA, (long, long) rangeB)
+    {
+        return rangeA.Item1 > rangeB.Item1 && rangeA.Item2 > rangeB.Item2;
     }
 
     private HashSet<(long, long)> GetSeedGroup()
@@ -36,9 +64,12 @@ public class Almanac
         var seedsListRaw = GetNumbersFromLine(seedString.Split(':')[1]);
         var seedsList = new HashSet<(long, long)>();
 
+        //seedsList.Add((seedsListRaw[0], seedsListRaw[0] + seedsListRaw[1]));
+        
         for (var seedIndex = 0; seedIndex < seedsListRaw.Count; seedIndex = seedIndex + 2)
         {
-            seedsList.Add((seedsListRaw[seedIndex], seedsListRaw[seedIndex + 1]));
+            //seedsList.Add((seedsListRaw[seedIndex], seedsListRaw[seedIndex + 1], seedsListRaw[seedIndex] + seedsListRaw[seedIndex + 1]));
+            seedsList.Add((seedsListRaw[seedIndex],seedsListRaw[seedIndex] + seedsListRaw[seedIndex + 1]));
         }
 
         return seedsList;
@@ -47,8 +78,10 @@ public class Almanac
     private HashSet<long> GetSeedsList((long, long) seedGroup)
     {
         var seedsList = new HashSet<long>();
+
+        var repetitions = seedGroup.Item2 - seedGroup.Item1;
         
-        for (var rangeIndex = 0; rangeIndex < seedGroup.Item2; rangeIndex++)
+        for (var rangeIndex = 0; rangeIndex < repetitions; rangeIndex++)
         {
             seedsList.Add(seedGroup.Item1 + rangeIndex);
         }
@@ -75,7 +108,14 @@ public class Almanac
             var temperature = GetDestinationByFilter(light, lightToTemperatureMapLines);
             var humidity = GetDestinationByFilter(temperature, temperatureToHumidityMapLines);
             var location = GetDestinationByFilter(humidity, humidityToLocationMapLines);
+
+            if (lowestLocationNumber > location || 
+                lowestLocationNumber == 0)
+            {
+                lowestLocationNumber = location;
+            }
             
+            /*
             seedMap.Add(new SeedMap
             {
                 Seed = seed,
@@ -87,6 +127,7 @@ public class Almanac
                 Humidity = humidity,
                 Location = location
             });
+            */
         }
     }
     
