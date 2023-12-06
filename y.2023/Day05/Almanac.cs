@@ -13,50 +13,36 @@ public class Almanac
     public long GetLowestLocation()
     {
         var seedGroups = GetSeedGroup();
-        
-        /*
-        Console.WriteLine($"Loaded {seedGroups.Count} seed groups.");
-
-        ClearOverlappingRanges(seedGroups);
-        
-        Console.WriteLine($"Loaded {seedGroups.Count} seed groups after remove overlapping ranges.");
-        */
 
         foreach (var seedGroup in seedGroups)
         {
             var seedsList = GetSeedsList(seedGroup);
-            BuildSeedMapData(seedsList);
+            var seedListsGroups = SplitListInGroups(seedsList, 100000);
+            
+            Parallel.ForEach(seedListsGroups, BuildSeedMapData);
         }
         
-        return this.lowestLocationNumber;
+        return lowestLocationNumber;
     }
     
-    private static void ClearOverlappingRanges(HashSet<(long, long)> seedGroups)
+    static List<List<T>> SplitListInGroups<T>(List<T> allItems, int groupSize)
     {
-        var seedGroupsWithoutOverlapping = new HashSet<(long, long)>(seedGroups);
+        var groups = new List<List<T>>();
 
-        foreach (var rangeA in seedGroups)
+        for (var i = 0; i < allItems.Count; i += groupSize)
         {
-            foreach (var rangeB in seedGroups.Where(rangeB => rangeA != rangeB && IsOverlapping(rangeA, rangeB)))
-            {
-                seedGroupsWithoutOverlapping.Remove(rangeB);
-            }
+            var group = allItems.Skip(i).Take(groupSize).ToList();
+            groups.Add(group);
         }
 
-        seedGroups.Clear();
-        seedGroups.UnionWith(seedGroupsWithoutOverlapping);
-    }
-    
-    private static bool IsOverlapping((long, long) rangeA, (long, long) rangeB)
-    {
-        return rangeA.Item1 < rangeB.Item1 && rangeA.Item2 > rangeB.Item2;
+        return groups;
     }
 
-    private HashSet<(long, long)> GetSeedGroup()
+    private List<(long, long)> GetSeedGroup()
     {
         var seedString = almanacLines.FirstOrDefault(x => x.Contains("seeds:"));
         var seedsListRaw = GetNumbersFromLine(seedString.Split(':')[1]);
-        var seedsList = new HashSet<(long, long)>();
+        var seedsList = new List<(long, long)>();
         
         for (var seedIndex = 0; seedIndex < seedsListRaw.Count; seedIndex = seedIndex + 2)
         {
@@ -83,7 +69,7 @@ public class Almanac
         return seedList;
     }
     
-    private HashSet<long> GetSeedsList((long, long) seedGroup)
+    private List<long> GetSeedsList((long, long) seedGroup)
     {
         var seedsList = new HashSet<long>();
 
@@ -94,10 +80,10 @@ public class Almanac
             seedsList.Add(seedGroup.Item1 + rangeIndex);
         }
 
-        return seedsList;
+        return seedsList.ToList();
     }
 
-    private void BuildSeedMapData(HashSet<long> seedsList)
+    private void BuildSeedMapData(List<long> seedsList)
     {
         var seedToSoilMapLines = GetMapLinesByMapName(almanacLines, "seed-to-soil map:");
         var soilToFertilizerMapLines = GetMapLinesByMapName(almanacLines, "soil-to-fertilizer map:");
@@ -107,7 +93,8 @@ public class Almanac
         var temperatureToHumidityMapLines = GetMapLinesByMapName(almanacLines, "temperature-to-humidity map:");
         var humidityToLocationMapLines = GetMapLinesByMapName(almanacLines, "humidity-to-location map:");
         
-        Console.WriteLine($"Seeds to process: {seedsList.Count}");
+        var threadId = Environment.CurrentManagedThreadId;
+        Console.WriteLine($"[{threadId}]Seeds to process: {seedsList.Count}");
         
         foreach (var seed in seedsList)
         {
@@ -119,21 +106,24 @@ public class Almanac
             var humidity = GetDestinationByFilter(temperature, temperatureToHumidityMapLines);
             var location = GetDestinationByFilter(humidity, humidityToLocationMapLines);
 
-            if (lowestLocationNumber > location || 
-                lowestLocationNumber == 0)
+            lock (typeof(Program))
             {
-                lowestLocationNumber = location;
+                if (lowestLocationNumber > location || 
+                    lowestLocationNumber == 0)
+                {
+                    lowestLocationNumber = location;
                 
-                Console.WriteLine($"Seed {seed}, soil {soil}, fertilizer {fertilizer}, water {water}, light {light}, temperature {temperature}, humidity {humidity}, location {location}.");
+                    Console.WriteLine($"[{threadId}]Seed {seed}, soil {soil}, fertilizer {fertilizer}, water {water}, light {light}, temperature {temperature}, humidity {humidity}, location {location}.");
+
+                    return;
+                }
             }
         }
     }
     
-    private long GetDestinationByFilter(long filter, HashSet<string> mapLines)
+    private long GetDestinationByFilter(long filter, List<string> mapLines)
     {
         var mapData = GetMapDataFromLine(mapLines);
-        
-        //ClearOverlappingRanges(mapData);
         
         foreach (var data in mapData)
         {
@@ -148,30 +138,9 @@ public class Almanac
         return filter;
     }
     
-    private static void ClearOverlappingRanges(HashSet<(long, long, long)> seedGroups)
+    private List<(long, long, long)> GetMapDataFromLine(List<string> seedStrings)
     {
-        var seedGroupsWithoutOverlapping = new HashSet<(long, long, long)>(seedGroups);
-
-        foreach (var rangeA in seedGroups)
-        {
-            foreach (var rangeB in seedGroups.Where(rangeB => rangeA != rangeB && IsOverlapping(rangeA, rangeB)))
-            {
-                seedGroupsWithoutOverlapping.Remove(rangeB);
-            }
-        }
-
-        seedGroups.Clear();
-        seedGroups.UnionWith(seedGroupsWithoutOverlapping);
-    }
-    
-    private static bool IsOverlapping((long, long, long) rangeA, (long, long, long) rangeB)
-    {
-        return rangeA.Item2 < rangeB.Item2 && rangeA.Item3 > rangeB.Item3;
-    }
-    
-    private HashSet<(long, long, long)> GetMapDataFromLine(HashSet<string> seedStrings)
-    {
-        var seedList = new HashSet<(long, long, long)>();
+        var seedList = new List<(long, long, long)>();
 
         foreach (var seedString in seedStrings)
         {
@@ -214,10 +183,10 @@ public class Almanac
         return matchingNumber;
     }
     
-    private static HashSet<string> GetMapLinesByMapName(string[] almanacLines, string mapName)
+    private static List<string> GetMapLinesByMapName(string[] almanacLines, string mapName)
     {
         var indexOfSeedToSoil = Array.IndexOf(almanacLines, mapName);
-        var mapLines = new HashSet<string>();
+        var mapLines = new List<string>();
 
         for (var i = indexOfSeedToSoil + 1; i < almanacLines.Length; i++)
         {
