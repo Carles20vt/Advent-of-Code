@@ -25,18 +25,20 @@ internal abstract class Program
             */
 
             var filePath = "./Input.txt";
-            //filePath = "./InputExample.txt";
-            //filePath = "./InputCarles.txt";
+            //filePath = "./InputExample.txt"; //46
+            //filePath = "./Input_LLuis.txt";
+            //filePath = "./Input_Enric.txt"; //10834440
+            filePath = "./Input_Carmen.txt"; //26714516
             
             var stopwatch = new Stopwatch();
 
             var almanacLines = File.ReadAllLines(filePath);
-
+            
             stopwatch.Start();
             var almanac = new Almanac(almanacLines);
             var lowestLocation = almanac.GetLowestLocation();
             stopwatch.Stop();
-            Console.WriteLine($"\nThe lowest location number is: {lowestLocation} - {stopwatch.ElapsedMilliseconds/1000}s.");
+            Console.WriteLine($"\n[Part02] - The lowest location number is: {lowestLocation} - {stopwatch.ElapsedMilliseconds/1000}s.");
         }
         catch (Exception ex)
         {

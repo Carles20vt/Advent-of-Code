@@ -3,101 +3,52 @@ namespace Day05;
 public class Almanac
 {
     private readonly string[] _almanacLines;
+    private List<(long, long)> seedGroups;
+    private Dictionary<string, List<(long, long, long, long)>> mapData;
 
     public Almanac(string[] almanacLines)
     {
         _almanacLines = almanacLines;
+        seedGroups = GetSeedGroup();
+        mapData = new Dictionary<string, List<(long, long, long, long)>>();
+
+        LoadMaps();
     }
 
-    public long GetLowestLocation()
+    private void LoadMaps()
     {
-        long lowestSeed = -1;
-
-        var seedGroups = GetSeedGroup();
-
-        Console.WriteLine($"Loaded {seedGroups.Count} Seed Groups.");
-
-        Parallel.ForEach(seedGroups, (seedGroup, loopState) =>
-        {
-            var threadId = Environment.CurrentManagedThreadId;
-            var group = GetSeedsList(seedGroup);
-
-            Console.WriteLine($"The thread {threadId} started the search...");
-
-            var result = CheckSeedGroups(group);
-
-            Console.WriteLine($"The thread {threadId} found lowest location at: {result}.");
-
-            lock (typeof(Program))
-            {
-                if (lowestSeed == -1 || lowestSeed > result)
-                {
-                    lowestSeed = result;
-                    
-                    //loopState.Break();
-                }
-            }
-        });
-
-        return lowestSeed;
-    }
-
-    private long CheckSeedGroups(List<long> seedsList)
-    {
-        var seedsToCheck = seedsList.ToHashSet();
-
         var seedToSoilMapLines = GetMapLinesByMapName(_almanacLines, "seed-to-soil map:");
+        var seedToSoilMapData = GetMapDataFromLine(seedToSoilMapLines);
+        mapData.Add("SeedToSoil", seedToSoilMapData);
+        
         var soilToFertilizerMapLines = GetMapLinesByMapName(_almanacLines, "soil-to-fertilizer map:");
+        var soilToFertilizerMapData = GetMapDataFromLine(soilToFertilizerMapLines);
+        mapData.Add("SoilToFertilizer", soilToFertilizerMapData);
+        
         var fertilizerToWaterMapLines = GetMapLinesByMapName(_almanacLines, "fertilizer-to-water map:");
+        var fertilizerToWaterMapData = GetMapDataFromLine(fertilizerToWaterMapLines);
+        mapData.Add("FertilizerToWater", fertilizerToWaterMapData);
+        
         var waterToLightMapLines = GetMapLinesByMapName(_almanacLines, "water-to-light map:");
+        var waterToLightMapData = GetMapDataFromLine(waterToLightMapLines);
+        mapData.Add("WaterToLight", waterToLightMapData);
+        
         var lightToTemperatureMapLines = GetMapLinesByMapName(_almanacLines, "light-to-temperature map:");
+        var lightToTemperatureMapData = GetMapDataFromLine(lightToTemperatureMapLines);
+        mapData.Add("LightToTemperature", lightToTemperatureMapData);
+        
         var temperatureToHumidityMapLines = GetMapLinesByMapName(_almanacLines, "temperature-to-humidity map:");
+        var temperatureToHumidityMapData = GetMapDataFromLine(temperatureToHumidityMapLines);
+        mapData.Add("TemperatureToHumidity", temperatureToHumidityMapData);
+        
         var humidityToLocationMapLines = GetMapLinesByMapName(_almanacLines, "humidity-to-location map:");
-
-        for (var location = 0; location < 100000000; location++)
-        {
-            var humidity = GetInverseDestinationByFilter(location, humidityToLocationMapLines);
-            var temperature = GetInverseDestinationByFilter(humidity, temperatureToHumidityMapLines);
-            var light = GetInverseDestinationByFilter(temperature, lightToTemperatureMapLines);
-            var water = GetInverseDestinationByFilter(light, waterToLightMapLines);
-            var fertilizer = GetInverseDestinationByFilter(water, fertilizerToWaterMapLines);
-            var soil = GetInverseDestinationByFilter(fertilizer, soilToFertilizerMapLines);
-            var seed = GetInverseDestinationByFilter(soil, seedToSoilMapLines);
-
-            if (!seedsToCheck.Contains(seed))
-            {
-                continue;
-            }
-
-            Console.WriteLine(
-                $"[Seed {seed}, soil {soil}, fertilizer {fertilizer}, water {water}, light {light}, temperature {temperature}, humidity {humidity}, location {location}.");
-
-            return location;
-        }
-
-        return -1;
-    }
-
-    private long GetInverseDestinationByFilter(long filter, List<string> mapLines)
+        var humidityToLocationMapData = GetMapDataFromLine(humidityToLocationMapLines);
+        mapData.Add("HumidityToLocation", humidityToLocationMapData);
+     }
+    
+    private List<(long, long, long, long)> GetMapDataFromLine(List<string> seedStrings)
     {
-        var mapData = GetMapDataFromLine(mapLines);
-
-        foreach (var data in mapData)
-        {
-            var numberFound = GetInverseMatchingNumberOnMap(filter, data);
-
-            if (numberFound != -1)
-            {
-                return numberFound;
-            }
-        }
-
-        return filter;
-    }
-
-    private List<(long, long, long)> GetMapDataFromLine(List<string> seedStrings)
-    {
-        var seedList = new List<(long, long, long)>();
+        var seedList = new List<(long, long, long, long)>();
 
         foreach (var seedString in seedStrings)
         {
@@ -107,41 +58,134 @@ public class Almanac
             var sourceRangeStart = splitSeeds[1];
             var rangeLength = splitSeeds[2];
 
-            var isDestinationRangeStartParsed =
-                long.TryParse(destinationRangeStart, out var parsedDestinationRangeStart);
-            var isSourceRangeStartParsed = long.TryParse(sourceRangeStart, out var parsedSourceRangeStart);
-            var isRangeLengthParsed = long.TryParse(rangeLength, out var parsedRangeLengthParsed);
+            var parsedDestinationRangeStart = long.Parse(destinationRangeStart);
+            var parsedSourceRangeStart = long.Parse(sourceRangeStart);
+            var parsedRangeLengthParsed = long.Parse(rangeLength);
 
             var sourceRangeEnd = parsedSourceRangeStart + parsedRangeLengthParsed;
+            var destinationRangeEnd = parsedDestinationRangeStart + parsedRangeLengthParsed;
 
-            if (isDestinationRangeStartParsed &&
-                isSourceRangeStartParsed &&
-                isRangeLengthParsed)
-            {
-                seedList.Add((parsedDestinationRangeStart, parsedSourceRangeStart, sourceRangeEnd));
-            }
+            seedList.Add((parsedDestinationRangeStart, destinationRangeEnd, parsedSourceRangeStart, sourceRangeEnd));
         }
 
         return seedList;
     }
 
-    private long GetInverseMatchingNumberOnMap(long numberToFind, (long, long, long) splitMapLines)
+    public long GetLowestLocation()
     {
-        var destinationRangeStart = splitMapLines.Item1;
-        var sourceRangeStart = splitMapLines.Item2;
-        var sourceRangeEnd = splitMapLines.Item3;
+        long lowestSeed = -1;
 
+        Console.WriteLine($"Loaded {seedGroups.Count} Seed Groups.");
 
-        var matchingNumber = numberToFind + sourceRangeStart - destinationRangeStart;
-        if (sourceRangeStart > matchingNumber ||
-            sourceRangeEnd < matchingNumber)
+        var maxLocationToCheck = 50000000;
+        var partitions = maxLocationToCheck / 1;
+        var groupedLocationsToCheck = new List<(long, long)>();
+
+        for (var i = 0; i < maxLocationToCheck; i += partitions)
+        {
+            groupedLocationsToCheck.Add((i, i + partitions));
+        }
+
+        Parallel.ForEach(groupedLocationsToCheck, (groupedLocationToCheck, loopState) =>
+        {
+            var threadId = Environment.CurrentManagedThreadId;
+
+            Console.WriteLine($"The thread {threadId} started the search...");
+
+            var result = CheckSeedGroups(groupedLocationToCheck.Item1, groupedLocationToCheck.Item2);
+
+            if (result == -1)
+            {
+                Console.WriteLine($"The thread {threadId} not found any lowest location.");
+                return;
+            }
+
+            Console.WriteLine($"The thread {threadId} found lowest location at: {result}.");
+
+            lock (typeof(Program))
+            {
+                if (lowestSeed == -1 || lowestSeed > result)
+                {
+                    lowestSeed = result;
+                }
+            }
+        });
+
+        return lowestSeed;
+    }
+
+    private long CheckSeedGroups(long startIndex, long endIndex)
+    {
+        var locationFound = endIndex + 1;
+
+        for (var location = startIndex; location <= endIndex; location++)
+        {
+            var humidity = GetInverseDestinationByFilter(location, "HumidityToLocation");
+            var temperature = GetInverseDestinationByFilter(humidity, "TemperatureToHumidity");
+            var light = GetInverseDestinationByFilter(temperature, "LightToTemperature");
+            var water = GetInverseDestinationByFilter(light, "WaterToLight");
+            var fertilizer = GetInverseDestinationByFilter(water, "FertilizerToWater");
+            var soil = GetInverseDestinationByFilter(fertilizer, "SoilToFertilizer");
+            var seed = GetInverseDestinationByFilter(soil, "SeedToSoil", true);
+
+            if (!IsInAnySeedGroup(seed))
+            {
+                continue;
+            }
+
+            Console.WriteLine($"[Seed {seed}, soil {soil}, fertilizer {fertilizer}, water {water}, light {light}, temperature {temperature}, humidity {humidity}, location {location}.");
+
+            locationFound = location;
+
+            break;
+        }
+
+        if (locationFound == endIndex + 1)
         {
             return -1;
         }
 
-        return matchingNumber;
+        return locationFound;
     }
 
+    private bool IsInAnySeedGroup(long seedToCheck)
+    {
+        return seedGroups.Any(seedGroup => seedGroup.Item1 <= seedToCheck && seedGroup.Item2 >= seedToCheck);
+    }
+
+    private long GetInverseDestinationByFilter(long destination, string mapName, bool mustExist = false)
+    {
+        var mapRanges = this.mapData[mapName];
+
+        foreach (var range in mapRanges)
+        {
+            var numberFound = GetInverseMatchingNumberOnMap(destination, range);
+
+            if (numberFound != -1)
+            {
+                return numberFound;
+            }
+        }
+
+        return mustExist ? -1 : destination;
+    }
+
+    private long GetInverseMatchingNumberOnMap(long destinationToFind, (long, long, long, long) range)
+    {
+        var destinationRangeStart = range.Item1;
+        var destinationRangeEnd = range.Item2;
+        var sourceRangeStart = range.Item3;
+        var sourceRangeEnd = range.Item4;
+        
+        if (destinationRangeStart <= destinationToFind && destinationToFind <= destinationRangeEnd)
+        {
+            var sourceNumber = (destinationToFind - destinationRangeStart) + sourceRangeStart;
+            return sourceNumber;
+        }
+
+        return -1;
+    }
+    
     private List<(long, long)> GetSeedGroup()
     {
         var seedString = _almanacLines.FirstOrDefault(x => x.Contains("seeds:"));
@@ -155,7 +199,7 @@ public class Almanac
 
         return seedsList;
     }
-
+    
     private List<long> GetNumbersFromLine(string seedString)
     {
         var seedList = new List<long>();
@@ -172,21 +216,7 @@ public class Almanac
 
         return seedList;
     }
-
-    private List<long> GetSeedsList((long, long) seedGroup)
-    {
-        var seedsList = new List<long>();
-
-        var repetitions = seedGroup.Item2 - seedGroup.Item1;
-
-        for (var rangeIndex = 0; rangeIndex < repetitions; rangeIndex++)
-        {
-            seedsList.Add(seedGroup.Item1 + rangeIndex);
-        }
-
-        return seedsList;
-    }
-
+    
     private static List<string> GetMapLinesByMapName(string[] almanacLines, string mapName)
     {
         var indexOfSeedToSoil = Array.IndexOf(almanacLines, mapName);
