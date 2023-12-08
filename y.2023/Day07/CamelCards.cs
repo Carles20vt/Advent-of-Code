@@ -1,26 +1,29 @@
-using System.Text.RegularExpressions;
-
 namespace Day07;
 
 public class CamelCards
 {
-    private List<Hand> HandList;
-    public CamelCards(string[] cardLines)
+    private List<Hand> _handList;
+
+    private readonly bool _isJokerModeActive;
+    
+    public CamelCards(string[] cardLines, bool jokerActive = false)
     {
-        HandList = new List<Hand>();
-        BuildHands(cardLines);
+        _isJokerModeActive = jokerActive;
+            
+        _handList = new List<Hand>();
+        BuildHands(cardLines, jokerActive);
     }
 
     public long GetNumberOfTotalWinnings()
     {
         PrintResult();
             
-        return HandList.Sum(hand => hand.Winning);
+        return _handList.Sum(hand => hand.Winning);
     }
 
     private void PrintResult()
     {
-        foreach (var hand in HandList)
+        foreach (var hand in _handList)
         {
             var cards = hand.Cards.Aggregate(string.Empty, (current, card) => current + card.Label);
 
@@ -28,7 +31,7 @@ public class CamelCards
         }
     }
 
-    private void BuildHands(string[] cardLines)
+    private void BuildHands(string[] cardLines, bool jokerActive = false)
     {
         var fiveOfKindHands = new List<Hand>();
         var fourOfKindHands = new List<Hand>();
@@ -40,7 +43,7 @@ public class CamelCards
         
         foreach (var line in cardLines)
         {
-            var newHand = BuildHand(line);
+            var newHand = BuildHand(line, jokerActive);
 
             switch (newHand.HandType)
             {
@@ -91,8 +94,8 @@ public class CamelCards
 
         ApplyRankOrder(orderedHands);
         
-        HandList.Clear();
-        HandList = orderedHands;
+        _handList.Clear();
+        _handList = orderedHands;
     }
 
     private void ApplyRankOrder(List<Hand> hands)
@@ -122,6 +125,7 @@ public class CamelCards
             .ThenByDescending(hand => hand.Cards?[3].Strength)
             .ThenByDescending(hand => hand.Cards?[4].Strength)
             .ToList();
+        
 
         for (var i = 0; i < maxAmountOfCards; i++)
         {
@@ -131,20 +135,20 @@ public class CamelCards
         return orderedHandCards;
     }
     
-    private Hand BuildHand(string line)
+    private Hand BuildHand(string line, bool jokerActive = false)
     {
         var labelsString = line.Substring(0, 5).Trim().ToUpper();
         var amountString = line.Substring(5, line.Length - 5).Trim().ToUpper();
         
         var labels = labelsString.ToCharArray();
-        var cards = labels.Select(label => new Card(label)).ToList();
+        var cards = labels.Select(label => new Card(label, jokerActive)).ToList();
         var amount = int.Parse(amountString);
         
         var hand = new Hand
         {
             Cards = cards,
             Bid = amount,
-            HandType = DetermineHandType(labelsString),
+            HandType = _isJokerModeActive ? DetermineHandTypeUsingJoker (labelsString):  DetermineHandType(labelsString),
             Rank = 1,
             Strength = 1
         };
@@ -154,38 +158,39 @@ public class CamelCards
 
     private HandType DetermineHandType(string labels)
     {
-        var isFiveOfAKind = Regex.IsMatch(labels, @"^(\w)\1{4}$");
-        if (isFiveOfAKind)
+        var labelList = labels.ToCharArray().ToList();
+        
+        if (IsFiveOfKind(labelList))
         {
             return HandType.FiveOfAKind;
         }
         
-        if (IsFourOfKind(labels))
+        if (IsFourOfKind(labelList))
         {
             return HandType.FourOfKind;
         }
         
-        if (IsFullHouse(labels))
+        if (IsFullHouse(labelList))
         {
             return HandType.FullHouse;
         }
         
-        if (IsThreeOfKind(labels))
+        if (IsThreeOfKind(labelList))
         {
             return HandType.ThreeOfKind;
         }
         
-        if (IsTwoPair(labels))
+        if (IsTwoPair(labelList))
         {
             return HandType.TwoPair;
         }
         
-        if (IsOnePair(labels))
+        if (IsOnePair(labelList))
         {
             return HandType.OnePair;
         }
         
-        if (IsHighCard(labels))
+        if (IsHighCard(labelList))
         {
             return HandType.HighCard;
         }
@@ -193,10 +198,73 @@ public class CamelCards
         return HandType.HighCard;
     }
     
-    private bool IsFourOfKind(string labels)
+    private HandType DetermineHandTypeUsingJoker(string labels)
     {
         var labelList = labels.ToCharArray().ToList();
+        var containsJoker = labelList.Contains('J');
 
+        if ((IsFullHouse(labelList) && (labelList.Count(x => x.Equals('J')) == 2 || labelList.Count(x => x.Equals('J')) == 3)) ||
+            (IsFourOfKind(labelList) && containsJoker) ||
+            IsFiveOfKind(labelList))
+        {
+            return HandType.FiveOfAKind;
+        }
+        
+        if ((IsTwoPair(labelList) && labelList.Count(x => x.Equals('J')) == 2) ||
+            IsThreeOfKind(labelList) && containsJoker ||
+            IsFullHouse(labelList) && containsJoker ||
+            IsFourOfKind(labelList))
+        {
+            return HandType.FourOfKind;
+        }
+        
+        if ((IsTwoPair(labelList) && containsJoker)||
+            (IsThreeOfKind(labelList) && containsJoker) ||
+            IsFullHouse(labelList))
+        {
+            return HandType.FullHouse;
+        }
+        
+        if ((IsOnePair(labelList) && labelList.Count(x => x.Equals('J')) == 2) ||
+            (IsOnePair(labelList) && containsJoker) ||
+            IsThreeOfKind(labelList))
+        {
+            return HandType.ThreeOfKind;
+        }
+        
+        if ((IsOnePair(labelList) && containsJoker) ||
+            IsTwoPair(labelList))
+        {
+            return HandType.TwoPair;
+        }
+        
+        if ((IsHighCard(labelList) && containsJoker) ||
+            IsOnePair(labelList))
+        {
+            return HandType.OnePair;
+        }
+        
+        if (IsHighCard(labelList))
+        {
+            return HandType.HighCard;
+        }
+        
+        return HandType.HighCard;
+    }
+    
+    private bool IsFiveOfKind(List<char> labelList)
+    {
+        var repeatedLabel = FindRepeatedLabel(labelList, 5);
+        if (repeatedLabel.Equals('*'))
+        {
+            return false;
+        }
+
+        return true;
+    }
+    
+    private bool IsFourOfKind(List<char> labelList)
+    {
         var repeatedLabel = FindRepeatedLabel(labelList, 4);
         if (repeatedLabel.Equals('*'))
         {
@@ -206,10 +274,8 @@ public class CamelCards
         return true;
     }
 
-    private bool IsFullHouse(string labels)
+    private bool IsFullHouse(List<char> labelList)
     {
-        var labelList = labels.ToCharArray().ToList();
-
         var labelOne = labelList[0];
         var labelTwo = labelList.FirstOrDefault(x => !x.Equals(labelOne));
         var labelOneAmount = labelList.Count(x => x.Equals(labelOne));
@@ -219,10 +285,8 @@ public class CamelCards
                (labelOneAmount == 2 && labelTwoAmount == 3);
     }
     
-    private bool IsThreeOfKind(string labels)
+    private bool IsThreeOfKind(List<char> labelList)
     {
-        var labelList = labels.ToCharArray().ToList();
-        
         var repeatedLabel = FindRepeatedLabel(labelList, 3);
         if (repeatedLabel.Equals('*'))
         {
@@ -238,42 +302,40 @@ public class CamelCards
         return true;
     }
     
-    private bool IsTwoPair(string labels)
+    private bool IsTwoPair(List<char> labelList)
     {
-        var labelList = labels.ToCharArray().ToList();
-
-        var uniqueLabel = FindUniqueLabel(labelList);
+        var labelListCopy = new List<char>(labelList);
+        var uniqueLabel = FindUniqueLabel(labelListCopy);
         if (uniqueLabel.Equals('*'))
         {
             return false;
         }
 
-        labelList.Remove(uniqueLabel);
+        labelListCopy.Remove(uniqueLabel);
         
-        var labelOne = labelList[0];
-        var labelTwo = labelList.FirstOrDefault(x => !x.Equals(labelOne));
+        var labelOne = labelListCopy[0];
+        var labelTwo = labelListCopy.FirstOrDefault(x => !x.Equals(labelOne));
         
-        var labelOneAmount = labelList.Count(x => x.Equals(labelOne));
-        var labelTwoAmount = labelList.Count(x => x.Equals(labelTwo));
+        var labelOneAmount = labelListCopy.Count(x => x.Equals(labelOne));
+        var labelTwoAmount = labelListCopy.Count(x => x.Equals(labelTwo));
         
         return labelOneAmount == 2 && labelTwoAmount == 2;
     }
     
-    private bool IsOnePair(string labels)
+    private bool IsOnePair(List<char> labelList)
     {
-        var labelList = labels.ToCharArray().ToList();
-        
-        var repeatedLabel = FindRepeatedLabel(labelList, 2);
+        var labelListCopy = new List<char>(labelList);
+        var repeatedLabel = FindRepeatedLabel(labelListCopy, 2);
         if (repeatedLabel.Equals('*'))
         {
             return false;
         }
 
-        labelList.Remove(repeatedLabel);
+        labelListCopy.Remove(repeatedLabel);
 
-        foreach (var label in labelList)
+        foreach (var label in labelListCopy)
         {
-            var isUnique = IsLabelUnique(labelList, label);
+            var isUnique = IsLabelUnique(labelListCopy, label);
             if (!isUnique)
             {
                 return false;
@@ -283,10 +345,8 @@ public class CamelCards
         return true;
     }
     
-    private bool IsHighCard(string labels)
+    private bool IsHighCard(List<char> labelList)
     {
-        var labelList = labels.ToCharArray().ToList();
-
         foreach (var label in labelList)
         {
             var isUnique = IsLabelUnique(labelList, label);
