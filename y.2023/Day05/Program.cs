@@ -8,7 +8,6 @@ internal abstract class Program
     {
         try
         {
-            /*
             if (args.Length < 1)
             {
                 Console.WriteLine("No games input file provided. Please provide one.");
@@ -22,13 +21,6 @@ internal abstract class Program
                 Console.WriteLine($"File not found at path: {filePath}");
                 return;
             }
-            */
-
-            var filePath = "./Input.txt";
-            //filePath = "./InputExample.txt"; //46
-            //filePath = "./Input_LLuis.txt";
-            //filePath = "./Input_Enric.txt"; //10834440
-            filePath = "./Input_Carmen.txt"; //26714516
             
             var stopwatch = new Stopwatch();
 

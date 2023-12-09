@@ -46,7 +46,7 @@ public class Almanac
         mapData.Add("HumidityToLocation", humidityToLocationMapData);
      }
     
-    private List<(long, long, long, long)> GetMapDataFromLine(List<string> seedStrings)
+    private static List<(long, long, long, long)> GetMapDataFromLine(List<string> seedStrings)
     {
         var seedList = new List<(long, long, long, long)>();
 
@@ -64,11 +64,11 @@ public class Almanac
 
             var sourceRangeEnd = parsedSourceRangeStart + parsedRangeLengthParsed;
             var destinationRangeEnd = parsedDestinationRangeStart + parsedRangeLengthParsed;
-
+            
             seedList.Add((parsedDestinationRangeStart, destinationRangeEnd, parsedSourceRangeStart, sourceRangeEnd));
         }
 
-        return seedList;
+        return seedList.OrderByDescending(x => x.Item1).ToList();
     }
 
     public long GetLowestLocation()
@@ -77,15 +77,16 @@ public class Almanac
 
         Console.WriteLine($"Loaded {seedGroups.Count} Seed Groups.");
 
-        var maxLocationToCheck = 50000000;
-        var partitions = maxLocationToCheck / 1;
+        const int maxLocationToCheck = 50000000;
+        const int partitions = maxLocationToCheck / 10;
+        
         var groupedLocationsToCheck = new List<(long, long)>();
 
         for (var i = 0; i < maxLocationToCheck; i += partitions)
         {
             groupedLocationsToCheck.Add((i, i + partitions));
         }
-
+        
         Parallel.ForEach(groupedLocationsToCheck, (groupedLocationToCheck, loopState) =>
         {
             var threadId = Environment.CurrentManagedThreadId;
@@ -120,13 +121,13 @@ public class Almanac
 
         for (var location = startIndex; location <= endIndex; location++)
         {
-            var humidity = GetInverseDestinationByFilter(location, "HumidityToLocation");
-            var temperature = GetInverseDestinationByFilter(humidity, "TemperatureToHumidity");
-            var light = GetInverseDestinationByFilter(temperature, "LightToTemperature");
-            var water = GetInverseDestinationByFilter(light, "WaterToLight");
-            var fertilizer = GetInverseDestinationByFilter(water, "FertilizerToWater");
-            var soil = GetInverseDestinationByFilter(fertilizer, "SoilToFertilizer");
-            var seed = GetInverseDestinationByFilter(soil, "SeedToSoil", true);
+            var humidity = GetDestinationByFilter(location, "HumidityToLocation");
+            var temperature = GetDestinationByFilter(humidity, "TemperatureToHumidity");
+            var light = GetDestinationByFilter(temperature, "LightToTemperature");
+            var water = GetDestinationByFilter(light, "WaterToLight");
+            var fertilizer = GetDestinationByFilter(water, "FertilizerToWater");
+            var soil = GetDestinationByFilter(fertilizer, "SoilToFertilizer");
+            var seed = GetDestinationByFilter(soil, "SeedToSoil", true);
 
             if (!IsInAnySeedGroup(seed))
             {
@@ -153,13 +154,13 @@ public class Almanac
         return seedGroups.Any(seedGroup => seedGroup.Item1 <= seedToCheck && seedGroup.Item2 >= seedToCheck);
     }
 
-    private long GetInverseDestinationByFilter(long destination, string mapName, bool mustExist = false)
+    private long GetDestinationByFilter(long destination, string mapName, bool mustExist = false)
     {
-        var mapRanges = this.mapData[mapName];
+        var mapRanges = mapData[mapName];
 
         foreach (var range in mapRanges)
         {
-            var numberFound = GetInverseMatchingNumberOnMap(destination, range);
+            var numberFound = GetMatchingNumberOnMap(destination, range);
 
             if (numberFound != -1)
             {
@@ -170,20 +171,20 @@ public class Almanac
         return mustExist ? -1 : destination;
     }
 
-    private long GetInverseMatchingNumberOnMap(long destinationToFind, (long, long, long, long) range)
+    private static long GetMatchingNumberOnMap(long destinationToFind, (long, long, long, long) range)
     {
         var destinationRangeStart = range.Item1;
         var destinationRangeEnd = range.Item2;
         var sourceRangeStart = range.Item3;
         var sourceRangeEnd = range.Item4;
-        
-        if (destinationRangeStart <= destinationToFind && destinationToFind <= destinationRangeEnd)
-        {
-            var sourceNumber = (destinationToFind - destinationRangeStart) + sourceRangeStart;
-            return sourceNumber;
-        }
 
-        return -1;
+        if (destinationRangeStart > destinationToFind || destinationToFind > destinationRangeEnd)
+        {
+            return -1;
+        }
+        
+        var sourceNumber = (destinationToFind - destinationRangeStart) + sourceRangeStart;
+        return sourceNumber;
     }
     
     private List<(long, long)> GetSeedGroup()
@@ -200,7 +201,7 @@ public class Almanac
         return seedsList;
     }
     
-    private List<long> GetNumbersFromLine(string seedString)
+    private static List<long> GetNumbersFromLine(string seedString)
     {
         var seedList = new List<long>();
         var splitSeeds = seedString.Split(' ');
