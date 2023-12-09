@@ -16,6 +16,10 @@
       <Content Include="InputExample.txt">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
+      <None Remove="InputExample_Part02.txt" />
+      <Content Include="InputExample_Part02.txt">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 
 </Project>
