@@ -6,7 +6,6 @@ internal abstract class Program
 {
     private static void Main(string[] args)
     {
-        /*
         if (args.Length < 1)
         {
             Console.WriteLine("No input file provided. Please provide one.");
@@ -20,11 +19,6 @@ internal abstract class Program
             Console.WriteLine($"File not found at path: {filePath}");
             return;
         }
-        */
-
-        var filePath = "./Input.txt";
-        //filePath = "./InputExample.txt";
-        //filePath = "./InputExampleCarles.txt";
         
         var stopwatch = new Stopwatch();
 
@@ -38,7 +32,7 @@ internal abstract class Program
         Console.WriteLine($"\n[Part 1] - The total load at north support beams is: {totalLoadAtNorth} - {stopwatch.ElapsedMilliseconds}ms.\n");
         
         stopwatch.Start();
-        totalLoadAtNorth = parabolicReflectorDish.CalculateTotalLoadAtNorthWithSpinCycle(100);
+        totalLoadAtNorth = parabolicReflectorDish.CalculateTotalLoadAtNorthWithSpinCycle(1000);
         stopwatch.Stop();
 
         Console.WriteLine($"\n[Part 2] - The total load at north support beams after 1000M Cycles is: {totalLoadAtNorth} - {stopwatch.ElapsedMilliseconds}ms.\n");

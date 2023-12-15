@@ -204,7 +204,7 @@ public class ParabolicReflectorDish
         {
             var lastEmptySpace = (-1, -1);
             
-            for (var row = 0; row < rowsAmount - 1; row++)
+            for (var row = 0; row < rowsAmount; row++)
             {
                 var isRoundedRock = foundRoundedRocks.Any(x => x.Item1.Equals(row) && x.Item2.Equals(column));
                 var isCubeShapedRock = foundCubeShapedRocks.Any(x => x.Item1.Equals(row) && x.Item2.Equals(column));
