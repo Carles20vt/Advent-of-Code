@@ -30,9 +30,9 @@ internal abstract class Program
         var allLines = File.ReadAllLines(filePath);
         
         stopwatch.Start();
-        //var lensLibrary = new TheFloorWillBeLava(allLines.ToList());
-        //var energizedTiles = lensLibrary.CountEnergizedTiles();
+        var clumsyCrucible = new ClumsyCrucible(allLines.ToList());
+        var lastHeatLoss = clumsyCrucible.GetLastHeatLoss();
         stopwatch.Stop();
-        //Console.WriteLine($"\n[Part 1] - The tiles amount being energized are: {energizedTiles} - {stopwatch.ElapsedMilliseconds}ms.\n");
+        Console.WriteLine($"\n[Part 1] - The last heat loss it can incur is: {lastHeatLoss} - {stopwatch.ElapsedMilliseconds}ms.\n");
     }
 }
